@@ -109,6 +109,7 @@ updateTimer();
 setInterval(updateTimer, 1000);
 
 /* ---------- Интерактивные точки ---------- */
+let eyes = [];           // объявляем заранее — используется в resize()/setupEyes()
 const canvas = document.getElementById('dots');
 const ctx = canvas.getContext('2d');
 let W, H, dots = [];
@@ -157,7 +158,6 @@ function eyeShape(u, v) {
   return inside;
 }
 
-let eyes = [];
 function setupEyes() {
   const eyeScale = Math.min(W, H) * 0.16; // размер глаза
   const gap = eyeScale * 1.9;             // расстояние между глазами
