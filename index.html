@@ -1,35 +1,165 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Test</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        display: grid;
-        place-items: center;
-        min-height: 100vh;
-        background: #f4f6f8;
-        color: #222;
-      }
-      .container {
-        text-align: center;
-        padding: 2rem;
-        background: #fff;
-        border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-      }
-      h1 {
-        margin-bottom: 0.5rem;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h1>Привет!</h1>
-      <p>Это стартовая страница проекта.</p>
-    </div>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ДР Полино</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #0a0a0f;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #fff;
+  }
+  canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+  }
+  .content {
+    position: relative;
+    z-index: 2;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    pointer-events: none;
+  }
+  h1 {
+    font-size: clamp(1.8rem, 5vw, 3.5rem);
+    font-weight: 300;
+    letter-spacing: 2px;
+    margin-bottom: 40px;
+    text-shadow: 0 0 20px rgba(255,255,255,0.3);
+  }
+  .timer {
+    display: flex;
+    gap: clamp(10px, 3vw, 30px);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .unit {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 16px;
+    padding: 20px 25px;
+    min-width: 100px;
+    backdrop-filter: blur(10px);
+  }
+  .num {
+    font-size: clamp(2rem, 6vw, 4rem);
+    font-weight: 200;
+    font-variant-numeric: tabular-nums;
+  }
+  .label {
+    font-size: 0.85rem;
+    opacity: 0.6;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 6px;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="dots"></canvas>
+
+<div class="content">
+  <h1>ДР Полино через:</h1>
+  <div class="timer">
+    <div class="unit"><div class="num" id="days">00</div><div class="label">дней</div></div>
+    <div class="unit"><div class="num" id="hours">00</div><div class="label">часов</div></div>
+    <div class="unit"><div class="num" id="minutes">00</div><div class="label">минут</div></div>
+    <div class="unit"><div class="num" id="seconds">00</div><div class="label">секунд</div></div>
+  </div>
+</div>
+
+<script>
+/* ---------- Таймер до 23 сентября ---------- */
+function getTargetDate() {
+  const now = new Date();
+  let year = now.getFullYear();
+  let target = new Date(year, 8, 23); // месяц 8 = сентябрь
+  if (target < now) target = new Date(year + 1, 8, 23);
+  return target;
+}
+const target = getTargetDate();
+
+function updateTimer() {
+  const diff = target - new Date();
+  if (diff <= 0) {
+    document.querySelector('h1').textContent = '🎉 С Днём Рождения, Полина! 🎉';
+    return;
+  }
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff / 3600000) % 24);
+  const m = Math.floor((diff / 60000) % 60);
+  const s = Math.floor((diff / 1000) % 60);
+  document.getElementById('days').textContent    = String(d).padStart(2,'0');
+  document.getElementById('hours').textContent   = String(h).padStart(2,'0');
+  document.getElementById('minutes').textContent = String(m).padStart(2,'0');
+  document.getElementById('seconds').textContent = String(s).padStart(2,'0');
+}
+updateTimer();
+setInterval(updateTimer, 1000);
+
+/* ---------- Интерактивные точки ---------- */
+const canvas = document.getElementById('dots');
+const ctx = canvas.getContext('2d');
+let W, H, dots = [];
+const mouse = { x: -9999, y: -9999 };
+const GAP = 35;        // расстояние между точками в сетке
+const RADIUS = 1.2;    // базовый радиус точки
+const MAX_R = 6;       // максимальный радиус
+const RANGE = 150;     // радиус влияния курсора
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  dots = [];
+  const cols = Math.ceil(W / GAP) + 1;
+  const rows = Math.ceil(H / GAP) + 1;
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      dots.push({ x: i * GAP, y: j * GAP });
+    }
+  }
+}
+window.addEventListener('resize', resize);
+resize();
+
+function onMove(e) {
+  const t = e.touches ? e.touches[0] : e;
+  mouse.x = t.clientX;
+  mouse.y = t.clientY;
+}
+window.addEventListener('mousemove', onMove);
+window.addEventListener('touchmove', onMove, { passive: true });
+window.addEventListener('touchstart', onMove, { passive: true });
+window.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  for (const d of dots) {
+    const dx = d.x - mouse.x;
+    const dy = d.y - mouse.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const t = Math.max(0, 1 - dist / RANGE); // 0..1
+    const r = RADIUS + (MAX_R - RADIUS) * t;
+    const alpha = 0.25 + 0.75 * t;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.fill();
+  }
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
 </html>
