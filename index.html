@@ -1,339 +1,119 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ДР Полино</title>
   <style>
     * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #0a0d14;
-      color: #f5f5f5;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    canvas {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
-      z-index: 0;
-      background: rgba(10,13,20,0.94);
-    }
-
-    .content {
-      position: relative;
-      z-index: 2;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      pointer-events: none;
-      padding-top: 10px;
-    }
-
-    .title {
-      font-size: clamp(2.1rem, 2.6vw, 4rem);
-      line-height: 1.2;
-      letter-spacing: 0.04em;
-      font-weight: 300;
-      margin-bottom: 26px;
-      text-shadow: 0 0 20px rgba(255,255,255,0.18);
-    }
-
-    .timer {
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      gap: 18px;
-      flex-wrap: wrap;
-    }
-
-    .unit {
-      width: 150px;
-      min-height: 108px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.14);
-      border-radius: 18px;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
-      padding: 10px 12px 12px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      backdrop-filter: blur(1px);
-    }
-
-    .num {
-      font-size: clamp(2.3rem, 3.2vw, 4.2rem);
-      font-weight: 200;
-      line-height: 1;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: 0.06em;
-      color: rgba(255,255,255,0.95);
-    }
-
-    .label {
-      margin-top: 8px;
-      font-size: 0.78rem;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.58);
-      line-height: 1.1;
-    }
-
-    .eyes-wrap {
-      margin-top: 42px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 78px;
-      width: min(780px, 78vw);
-    }
-
-    .eye {
-      position: relative;
-      width: 260px;
-      height: 138px;
-      border-radius: 52% 48% 48% 52% / 58% 59% 41% 42%;
-      background: linear-gradient(180deg, rgba(244,214,227,0.97), rgba(255,255,255,0.95));
-      box-shadow:
-        inset 0 0 0 6px rgba(134, 67, 69, 0.8),
-        inset 0 0 0 14px rgba(186, 108, 116, 0.72),
-        0 0 30px rgba(255, 255, 255, 0.08);
-      overflow: hidden;
-      transform: rotate(-0.5deg);
-    }
-
-    .eye.right {
-      transform: scaleX(-1) rotate(-0.5deg);
-    }
-
-    .eye::before {
-      content: "";
-      position: absolute;
-      left: 15%;
-      right: 15%;
-      top: 18%;
-      bottom: 15%;
-      border-radius: 50%;
-      background:
-        radial-gradient(circle at 50% 44%, #f9d5f5 0%, #f3a9e6 18%, #d85ab0 48%, #8a2a65 72%, #5e102d 100%);
-      box-shadow: inset 0 0 0 4px rgba(140, 37, 90, 0.65);
-    }
-
-    .eye::after {
-      content: "";
-      position: absolute;
-      left: 20%;
-      right: 20%;
-      top: 42%;
-      bottom: 28%;
-      border-radius: 50%;
-      background: radial-gradient(circle at 32% 26%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.9) 14%, rgba(255,255,255,0.2) 18%, rgba(255,255,255,0.08) 35%, transparent 55%);
-      opacity: 0.9;
-    }
-
-    .eyebrow {
-      position: absolute;
-      width: 200px;
-      height: 54px;
-      top: -8px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: linear-gradient(180deg, rgba(61,32,19,0.96), rgba(27,18,14,0.96));
-      border-radius: 50% 50% 42% 42%;
-      box-shadow: 0 5px 10px rgba(0,0,0,0.15);
-      z-index: 3;
-    }
-
-    .eye .eyebrow {
-      width: 210px;
-      height: 48px;
-    }
-
-    .lashes {
-      position: absolute;
-      inset: auto 0 0 0;
-      height: 42%;
-      pointer-events: none;
-      z-index: 4;
-      opacity: 0.8;
-    }
-
-    .lashes span {
-      position: absolute;
-      width: 8px;
-      height: 38px;
-      background: linear-gradient(180deg, rgba(38,17,17,0.9), rgba(15,10,10,1));
-      border-radius: 6px;
-      bottom: 8px;
-      transform-origin: 50% 100%;
-      box-shadow: 0 0 6px rgba(0,0,0,0.25);
-    }
-
-    .lashes span:nth-child(1) { left: 14%; transform: rotate(-20deg); }
-    .lashes span:nth-child(2) { left: 28%; transform: rotate(-10deg); }
-    .lashes span:nth-child(3) { left: 42%; transform: rotate(-2deg); }
-    .lashes span:nth-child(4) { left: 56%; transform: rotate(2deg); }
-    .lashes span:nth-child(5) { left: 70%; transform: rotate(10deg); }
-    .lashes span:nth-child(6) { left: 84%; transform: rotate(20deg); }
-
-    .eye.left .lashes span { filter: drop-shadow(0 0 1px rgba(0,0,0,0.5)); }
-
-    .blink {
-      animation: blink 5s infinite ease-in-out;
-      transform-origin: center center;
-    }
-
-    @keyframes blink {
-      0%, 43%, 47%, 100% { transform: scaleY(1); }
-      45% { transform: scaleY(0.12); }
-    }
-
-    .blink .eyebrow {
-      animation: browLift 5s infinite ease-in-out;
-    }
-
-    @keyframes browLift {
-      0%, 45%, 100% { transform: translateX(-50%) translateY(0px); }
-      47%, 48% { transform: translateX(-50%) translateY(-4px); }
-    }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #090c13; color: #fff; font-family: Arial, sans-serif; }
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+    .content { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; align-items: center; padding-top: clamp(48px, 12vh, 90px); pointer-events: none; }
+    h1 { margin: 0 0 24px; font-size: clamp(27px, 4vw, 42px); font-weight: 300; letter-spacing: 1px; }
+    .timer { display: flex; gap: 14px; }
+    .unit { width: clamp(76px, 10vw, 105px); height: 78px; border: 1px solid rgba(255,255,255,.2); border-radius: 9px; background: rgba(255,255,255,.035); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .num { font-size: clamp(28px, 4vw, 38px); font-weight: 300; line-height: 1; font-variant-numeric: tabular-nums; }
+    .label { margin-top: 7px; font-size: 9px; color: rgba(255,255,255,.55); text-transform: uppercase; }
   </style>
 </head>
 <body>
-  <canvas id="dots"></canvas>
-
-  <div class="content">
-    <div class="title">ДР Полино через:</div>
-
-    <div class="timer">
-      <div class="unit"><div class="num" id="days">00</div><div class="label">дней</div></div>
-      <div class="unit"><div class="num" id="hours">00</div><div class="label">часов</div></div>
-      <div class="unit"><div class="num" id="minutes">00</div><div class="label">минут</div></div>
-      <div class="unit"><div class="num" id="seconds">00</div><div class="label">секунд</div></div>
-    </div>
-
-    <div class="eyes-wrap">
-      <div class="eye left blink">
-        <div class="eyebrow"></div>
-        <div class="lashes">
-          <span></span><span></span><span></span><span></span><span></span><span></span>
-        </div>
-      </div>
-
-      <div class="eye right blink">
-        <div class="eyebrow"></div>
-        <div class="lashes">
-          <span></span><span></span><span></span><span></span><span></span><span></span>
-        </div>
-      </div>
-    </div>
+<canvas id="dots"></canvas>
+<div class="content">
+  <h1>ДР Полино через:</h1>
+  <div class="timer">
+    <div class="unit"><div class="num" id="days">00</div><div class="label">дней</div></div>
+    <div class="unit"><div class="num" id="hours">00</div><div class="label">часов</div></div>
+    <div class="unit"><div class="num" id="minutes">00</div><div class="label">минут</div></div>
+    <div class="unit"><div class="num" id="seconds">00</div><div class="label">секунд</div></div>
   </div>
+</div>
+<script>
+  const target = (() => { const n = new Date(); let d = new Date(n.getFullYear(), 8, 23); if (d <= n) d = new Date(n.getFullYear() + 1, 8, 23); return d; })();
+  function updateTimer() {
+    const diff = target - new Date();
+    if (diff <= 0) { document.querySelector('h1').textContent = '🎉 С Днём Рождения, Полина! 🎉'; return; }
+    document.getElementById('days').textContent = String(Math.floor(diff / 86400000)).padStart(2, '0');
+    document.getElementById('hours').textContent = String(Math.floor(diff / 3600000) % 24).padStart(2, '0');
+    document.getElementById('minutes').textContent = String(Math.floor(diff / 60000) % 60).padStart(2, '0');
+    document.getElementById('seconds').textContent = String(Math.floor(diff / 1000) % 60).padStart(2, '0');
+  }
+  updateTimer(); setInterval(updateTimer, 1000);
 
-  <script>
-    const canvas = document.getElementById('dots');
-    const ctx = canvas.getContext('2d');
-    const W = window.innerWidth;
-    const H = window.innerHeight;
-    const dots = [];
-    const GAP = 30;
-    const BASE_R = 1.4;
-    const MOUSE_RANGE = 170;
-    const mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  const canvas = document.getElementById('dots'), ctx = canvas.getContext('2d');
+  const GAP = 19, mouse = { x: -9999, y: -9999 };
+  let W, H, dots = [], face = [];
 
-    function buildGrid() {
-      dots.length = 0;
-      const cols = Math.ceil(window.innerWidth / GAP) + 2;
-      const rows = Math.ceil(window.innerHeight / GAP) + 2;
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          dots.push({
-            x: x * GAP,
-            y: y * GAP,
-            baseX: x * GAP,
-            baseY: y * GAP,
-            alpha: 0.18,
-            r: BASE_R
-          });
-        }
+  // Пиксельная маска: каждая единица — настоящая точка общей неподвижной сетки.
+  const eye = [
+    '       1111111       ',
+    '    1111111111111    ',
+    '  11111111111111111  ',
+    ' 1111111111111111111 ',
+    '111111111111111111111',
+    '111111111111111111111',
+    '111111111111111111111',
+    '111111111111111111111',
+    ' 1111111111111111111 ',
+    '  11111111111111111  ',
+    '    1111111111111    ',
+    '       1111111       '
+  ];
+  const pupil = [
+    '      111      ',
+    '    1111111    ',
+    '   111111111   ',
+    '   111111111   ',
+    '    1111111    ',
+    '      111      '
+  ];
+
+  function gridPoint(x, y) { return dots[y * Math.ceil(W / GAP + 2) + x]; }
+
+  function build() {
+    W = canvas.width = innerWidth; H = canvas.height = innerHeight; dots = []; face = [];
+    const cols = Math.ceil(W / GAP) + 2, rows = Math.ceil(H / GAP) + 2;
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) dots.push({ x: x * GAP, y: y * GAP, gx: x, gy: y });
+
+    const width = eye[0].length, height = eye.length;
+    const gap = Math.max(9, Math.round(width * .7));
+    const startX = Math.round(cols / 2 - (width + gap) / 2);
+    const startY = Math.max(15, Math.round(rows * .63));
+    const left = [], right = [];
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) if (eye[y][x] === '1') {
+      const a = gridPoint(startX + x, startY + y), b = gridPoint(startX + x + gap, startY + y);
+      if (a) left.push(a); if (b) right.push(b);
+    }
+    const pw = pupil[0].length, ph = pupil.length;
+    const pupilX = Math.floor((width - pw) / 2), pupilY = 3;
+    for (let y = 0; y < ph; y++) for (let x = 0; x < pw; x++) if (pupil[y][x] === '1') {
+      const a = gridPoint(startX + pupilX + x, startY + pupilY + y), b = gridPoint(startX + pupilX + x + gap, startY + pupilY + y);
+      if (a) a.kind = 'pupil'; if (b) b.kind = 'pupil';
+    }
+    left.forEach(d => d.kind = d.kind || 'iris'); right.forEach(d => d.kind = d.kind || 'iris');
+    face = [...left, ...right];
+  }
+  addEventListener('resize', build); build();
+  addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+  addEventListener('touchmove', e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; }, { passive: true });
+
+  function animate(time) {
+    ctx.clearRect(0, 0, W, H);
+    const blink = ((time % 6200) > 5000 && (time % 6200) < 5350) ? Math.max(.04, ((time % 6200) < 5175 ? 1 - (time % 6200 - 5000) / 175 : ((time % 6200) - 5175) / 175)) : 1;
+    const special = new Set(face);
+    for (const d of dots) {
+      const dist = Math.hypot(d.x - mouse.x, d.y - mouse.y), hover = Math.max(0, 1 - dist / 150);
+      let radius = 1.25 + hover * 3.5, alpha = .16 + hover * .72, color = '255,255,255';
+      if (special.has(d)) {
+        const glow = d.kind === 'pupil' ? .95 : .65;
+        radius = (d.kind === 'pupil' ? 2.6 : 2.15) * (d.kind === 'pupil' ? blink : 1);
+        alpha = d.kind === 'pupil' ? .18 + .82 * blink : .55 + glow * .35;
+        color = d.kind === 'pupil' ? '255,255,255' : '238,151,221';
       }
-    }
-
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      buildGrid();
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-    window.addEventListener('mousemove', (e) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-    });
-
-    function drawDots(time) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (const dot of dots) {
-        const dx = dot.x - mouse.x;
-        const dy = dot.y - mouse.y;
-        const dist = Math.hypot(dx, dy);
-        const influence = Math.max(0, 1 - dist / MOUSE_RANGE);
-        const flicker = 0.4 + Math.sin(time * 0.002 + dot.baseX * 0.14 + dot.baseY * 0.1) * 0.35;
-        const alpha = 0.12 + influence * 0.7 + flicker * 0.18;
-        const r = BASE_R + influence * 2.6;
-
-        ctx.beginPath();
-        ctx.arc(dot.x, dot.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-        ctx.fill();
-      }
-    }
-
-    function animate(time) {
-      drawDots(time);
-      requestAnimationFrame(animate);
+      ctx.beginPath(); ctx.arc(d.x, d.y, radius, 0, Math.PI * 2); ctx.fillStyle = `rgba(${color},${alpha})`; ctx.fill();
     }
     requestAnimationFrame(animate);
-
-    function getTargetDate() {
-      const now = new Date();
-      let year = now.getFullYear();
-      let date = new Date(year, 8, 23);
-      if (date < now) date = new Date(year + 1, 8, 23);
-      return date;
-    }
-
-    const target = getTargetDate();
-    function updateTimer() {
-      const diff = target - new Date();
-      if (diff <= 0) {
-        document.querySelector('.title').textContent = '🎉 С Днём Рождения, Полина! 🎉';
-        return;
-      }
-
-      const d = Math.floor(diff / 86400000);
-      const h = Math.floor((diff / 3600000) % 24);
-      const m = Math.floor((diff / 60000) % 60);
-      const s = Math.floor((diff / 1000) % 60);
-
-      document.getElementById('days').textContent = String(d).padStart(2, '0');
-      document.getElementById('hours').textContent = String(h).padStart(2, '0');
-      document.getElementById('minutes').textContent = String(m).padStart(2, '0');
-      document.getElementById('seconds').textContent = String(s).padStart(2, '0');
-    }
-
-    updateTimer();
-    setInterval(updateTimer, 1000);
-  </script>
+  }
+  requestAnimationFrame(animate);
+</script>
 </body>
 </html>
