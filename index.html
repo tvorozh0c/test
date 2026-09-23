@@ -84,7 +84,7 @@
 function getTargetDate() {
   const now = new Date();
   let year = now.getFullYear();
-  let target = new Date(year, 8, 23); // месяц 8 = сентябрь
+  let target = new Date(year, 8, 23);
   if (target < now) target = new Date(year + 1, 8, 23);
   return target;
 }
@@ -100,45 +100,60 @@ function updateTimer() {
   const h = Math.floor((diff / 3600000) % 24);
   const m = Math.floor((diff / 60000) % 60);
   const s = Math.floor((diff / 1000) % 60);
-  document.getElementById('days').textContent    = String(d).padStart(2,'0');
-  document.getElementById('hours').textContent   = String(h).padStart(2,'0');
+  document.getElementById('days').textContent = String(d).padStart(2,'0');
+  document.getElementById('hours').textContent = String(h).padStart(2,'0');
   document.getElementById('minutes').textContent = String(m).padStart(2,'0');
   document.getElementById('seconds').textContent = String(s).padStart(2,'0');
 }
 updateTimer();
 setInterval(updateTimer, 1000);
 
-/* ---------- Сетка точек и отдельное живое существо ---------- */
+/* ---------- Сетка точек + существо из точек ---------- */
 const canvas = document.getElementById('dots');
 const ctx = canvas.getContext('2d');
 let W, H, dots = [];
 const mouse = { x: -9999, y: -9999 };
 const GAP = 35;
-const RADIUS = 1.2;
-const MAX_R = 6;
-const RANGE = 150;
+const baseRadius = 1.4;
+const hoverRadius = 6;
+const influenceRange = 150;
 
-// Существо живёт отдельно от сетки, но реагирует на тот же курсор.
 const creature = {
-  x: 160, y: 160, vx: 0, vy: 0,
-  phase: Math.random() * Math.PI * 2,
-  targetX: 160, targetY: 160,
-  nextMove: 0
+  x: 250,
+  y: 200,
+  vx: 0,
+  vy: 0,
+  targetX: 250,
+  targetY: 200,
+  a: 0
 };
+
+function buildGrid() {
+  dots = [];
+  const cols = Math.ceil(W / GAP) + 2;
+  const rows = Math.ceil(H / GAP) + 2;
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      dots.push({
+        x: i * GAP,
+        y: j * GAP,
+        baseX: i * GAP,
+        baseY: j * GAP,
+        active: 1,
+        r: baseRadius
+      });
+    }
+  }
+}
 
 function resize() {
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
-  dots = [];
-  const cols = Math.ceil(W / GAP) + 1;
-  const rows = Math.ceil(H / GAP) + 1;
-  for (let i = 0; i < cols; i++) {
-    for (let j = 0; j < rows; j++) {
-      dots.push({ x: i * GAP, y: j * GAP });
-    }
-  }
-  creature.x = Math.min(Math.max(creature.x, 80), W - 80);
-  creature.y = Math.min(Math.max(creature.y, 80), H - 80);
+  buildGrid();
+  creature.x = Math.min(Math.max(creature.x, 60), W - 60);
+  creature.y = Math.min(Math.max(creature.y, 60), H - 60);
+  creature.targetX = creature.x;
+  creature.targetY = creature.y;
 }
 window.addEventListener('resize', resize);
 resize();
@@ -151,16 +166,29 @@ function onMove(e) {
 window.addEventListener('mousemove', onMove);
 window.addEventListener('touchmove', onMove, { passive: true });
 window.addEventListener('touchstart', onMove, { passive: true });
-window.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
+window.addEventListener('mouseleave', () => {
+  mouse.x = -9999;
+  mouse.y = -9999;
+});
 
-function drawGrid() {
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function drawBackgroundGrid() {
   for (const d of dots) {
-    const dx = d.x - mouse.x;
-    const dy = d.y - mouse.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const t = Math.max(0, 1 - dist / RANGE);
-    const r = RADIUS + (MAX_R - RADIUS) * t;
-    const alpha = 0.25 + 0.75 * t;
+    let dx = d.x - mouse.x;
+    let dy = d.y - mouse.y;
+    let dist = Math.hypot(dx, dy);
+    let t = Math.max(0, 1 - dist / influenceRange);
+    let r = baseRadius + (hoverRadius - baseRadius) * t;
+    let alpha = 0.2 + 0.8 * t;
+
+    if (dist < 1) {
+      r = hoverRadius;
+      alpha = 1;
+    }
+
     ctx.beginPath();
     ctx.arc(d.x, d.y, r, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(255,255,255,${alpha})`;
@@ -169,108 +197,111 @@ function drawGrid() {
 }
 
 function drawCreature(time) {
-  const seconds = time / 1000;
-  creature.phase += 0.035;
+  creature.a += 0.025;
 
-  // Вдали от курсора существо спокойно странствует по экрану.
-  if (seconds > creature.nextMove) {
-    creature.targetX = 90 + Math.random() * Math.max(1, W - 180);
-    creature.targetY = 90 + Math.random() * Math.max(1, H - 180);
-    creature.nextMove = seconds + 2.5 + Math.random() * 3;
+  if (time % 4200 < 30) {
+    creature.targetX = 80 + Math.random() * (W - 160);
+    creature.targetY = 80 + Math.random() * (H - 160);
   }
 
-  // Рядом с курсором существо заинтересованно тянется к нему, не прилипая.
   if (mouse.x > -1000) {
     const dx = mouse.x - creature.x;
     const dy = mouse.y - creature.y;
-    const distance = Math.hypot(dx, dy);
-    if (distance < 280 && distance > 75) {
-      creature.targetX = mouse.x - (dx / distance) * 70;
-      creature.targetY = mouse.y - (dy / distance) * 70;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 220) {
+      creature.targetX = creature.x - dx * 0.12 + (Math.random() - 0.5) * 20;
+      creature.targetY = creature.y - dy * 0.12 + (Math.random() - 0.5) * 20;
     }
   }
 
-  creature.vx += (creature.targetX - creature.x) * 0.0008;
-  creature.vy += (creature.targetY - creature.y) * 0.0008;
-  creature.vx *= 0.985;
-  creature.vy *= 0.985;
+  creature.vx += (creature.targetX - creature.x) * 0.018;
+  creature.vy += (creature.targetY - creature.y) * 0.018;
+  creature.vx *= 0.9;
+  creature.vy *= 0.9;
   creature.x += creature.vx;
   creature.y += creature.vy;
+  creature.x = clamp(creature.x, 60, W - 60);
+  creature.y = clamp(creature.y, 60, H - 60);
 
-  const bob = Math.sin(creature.phase) * 4;
-  const angle = Math.atan2(creature.vy, creature.vx) || 0;
-  const x = creature.x;
-  const y = creature.y + bob;
+  const headR = 12;
+  const bodyDots = [];
 
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(angle * 0.18);
-  ctx.shadowBlur = 28;
-  ctx.shadowColor = 'rgba(157, 121, 255, 0.8)';
+  for (let y = -4; y <= 4; y++) {
+    for (let x = -12; x <= 12; x++) {
+      const dist = Math.hypot(x, y);
+      if (dist <= 11.5) {
+        bodyDots.push({ x: creature.x + x * 6, y: creature.y + y * 6 + Math.sin(time * 0.003 + x) * 2 });
+      }
+    }
+  }
 
-  // Хвост из нескольких светящихся точек подчёркивает, что это часть мира точек.
-  for (let i = 3; i > 0; i--) {
-    const tailX = -34 - i * 12;
-    const tailY = Math.sin(creature.phase - i * 0.7) * 8;
+  // хвост
+  for (let i = 0; i < 10; i++) {
+    const t = i / 10;
+    const px = creature.x - 70 - i * 10 + Math.sin(time * 0.005 + i) * 8;
+    const py = creature.y + Math.cos(time * 0.004 + i * 1.4) * (6 + i * 0.6);
+    bodyDots.push({ x: px, y: py, r: 2.3 });
+  }
+
+  // глаза
+  const eyeOffset = 12;
+  const lookX = mouse.x > -999 ? clamp((mouse.x - creature.x) / 24, -3, 3) : 0;
+  const lookY = mouse.y > -999 ? clamp((mouse.y - creature.y) / 24, -2, 2) : 0;
+
+  const eyePositions = [
+    { x: creature.x - eyeOffset, y: creature.y - 8 },
+    { x: creature.x + eyeOffset, y: creature.y - 8 }
+  ];
+
+  for (const d of bodyDots) {
+    const dx = d.x - mouse.x;
+    const dy = d.y - mouse.y;
+    const dist = Math.hypot(dx, dy);
+    const t = Math.max(0, 1 - dist / influenceRange);
+    const r = (d.r || baseRadius) + (hoverRadius - baseRadius) * t;
+    const alpha = 0.7 + 0.3 * t;
+
     ctx.beginPath();
-    ctx.arc(tailX, tailY, 3 + i * 1.5, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(177, 143, 255, ${0.25 + i * 0.12})`;
+    ctx.arc(d.x, d.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(183, 202, 255, ${alpha})`;
     ctx.fill();
   }
 
-  // Мягкое тело существа.
+  for (const eye of eyePositions) {
+    const dx = eye.x - mouse.x;
+    const dy = eye.y - mouse.y;
+    const dist = Math.hypot(dx, dy);
+    const t = Math.max(0, 1 - dist / influenceRange);
+    const pupilR = 2 + t * 1.8;
+    const px = eye.x + lookX * 1.6;
+    const py = eye.y + lookY * 1.6;
+
+    ctx.beginPath();
+    ctx.arc(px, py, pupilR, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(px + 1, py - 0.5, pupilR * 0.45, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.95)';
+    ctx.fill();
+  }
+
+  // рот
   ctx.beginPath();
-  ctx.ellipse(0, 0, 38, 29, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(117, 86, 196, 0.78)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(225, 213, 255, 0.8)';
+  ctx.arc(creature.x, creature.y + 18, 10, 0.2, Math.PI - 0.2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)';
   ctx.lineWidth = 1.5;
   ctx.stroke();
-
-  // Усики.
-  ctx.shadowBlur = 8;
-  ctx.beginPath();
-  ctx.moveTo(-12, -22); ctx.quadraticCurveTo(-20, -43, -30, -40);
-  ctx.moveTo(12, -22); ctx.quadraticCurveTo(20, -43, 30, -40);
-  ctx.strokeStyle = 'rgba(225, 213, 255, 0.85)';
-  ctx.stroke();
-  for (const antenna of [{ x: -30, y: -40 }, { x: 30, y: -40 }]) {
-    ctx.beginPath();
-    ctx.arc(antenna.x, antenna.y, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#eadfff';
-    ctx.fill();
-  }
-
-  // Глаза смотрят в сторону курсора, если он рядом.
-  const lookX = mouse.x > -1000 ? Math.max(-3, Math.min(3, (mouse.x - x) / 35)) : 0;
-  const lookY = mouse.y > -1000 ? Math.max(-3, Math.min(3, (mouse.y - y) / 35)) : 0;
-  for (const eyeX of [-13, 13]) {
-    ctx.beginPath();
-    ctx.arc(eyeX, -5, 8, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(eyeX + lookX, -5 + lookY, 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#171323';
-    ctx.fill();
-  }
-
-  // Маленькая улыбка.
-  ctx.beginPath();
-  ctx.arc(0, 5, 10, 0.15, Math.PI - 0.15);
-  ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.restore();
 }
 
-function draw(time) {
+function animate(time) {
   ctx.clearRect(0, 0, W, H);
-  drawGrid();
+  drawBackgroundGrid();
   drawCreature(time);
-  requestAnimationFrame(draw);
+  requestAnimationFrame(animate);
 }
-requestAnimationFrame(draw);
+requestAnimationFrame(animate);
 </script>
 </body>
 </html>
